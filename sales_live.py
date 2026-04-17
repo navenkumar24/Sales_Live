@@ -17,6 +17,18 @@ st.set_page_config(
 )
 
 # -----------------------------
+# SESSION STATE INIT (✅ FIX)
+# -----------------------------
+if "login" not in st.session_state:
+    st.session_state.login = False
+
+if "user" not in st.session_state:
+    st.session_state.user = ""
+
+if "role" not in st.session_state:
+    st.session_state.role = ""
+
+# -----------------------------
 # DB
 # -----------------------------
 conn = sqlite3.connect("command_center.db", check_same_thread=False)
@@ -71,9 +83,6 @@ create_users()
 # -----------------------------
 # LOGIN
 # -----------------------------
-if "login" not in st.session_state:
-    st.session_state.login = False
-
 if not st.session_state.login:
 
     st.title("🔐 Enterprise Command Center PRO")
@@ -102,8 +111,9 @@ if not st.session_state.login:
 # -----------------------------
 st.sidebar.title("🚀 Control Panel")
 
-st.sidebar.success(f"{st.session_state.user}")
-st.sidebar.info(f"Role: {st.session_state.role}")
+# ✅ SAFE ACCESS
+st.sidebar.success(f"{st.session_state.get('user', 'Guest')}")
+st.sidebar.info(f"Role: {st.session_state.get('role', 'N/A')}")
 
 dashboard = st.sidebar.selectbox(
     "Dashboard",
@@ -240,4 +250,6 @@ if st.sidebar.button("Export Hospital"):
 # -----------------------------
 if st.sidebar.button("Logout"):
     st.session_state.login = False
+    st.session_state.user = ""
+    st.session_state.role = ""
     st.rerun()
