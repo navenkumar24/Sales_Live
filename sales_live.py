@@ -4,7 +4,6 @@ import random
 import plotly.express as px
 from datetime import datetime
 import sqlite3
-from passlib.hash import pbkdf2_sha256
 from streamlit_autorefresh import st_autorefresh
 
 # -----------------------------
@@ -17,30 +16,12 @@ st.set_page_config(
 )
 
 # -----------------------------
-# SESSION STATE INIT (✅ FIX)
-# -----------------------------
-if "login" not in st.session_state:
-    st.session_state.login = False
-
-if "user" not in st.session_state:
-    st.session_state.user = ""
-
-if "role" not in st.session_state:
-    st.session_state.role = ""
-
-# -----------------------------
 # DB
 # -----------------------------
 conn = sqlite3.connect("command_center.db", check_same_thread=False)
 cursor = conn.cursor()
 
 def init_db():
-    cursor.execute("""CREATE TABLE IF NOT EXISTS users(
-        username TEXT,
-        password TEXT,
-        role TEXT
-    )""")
-
     cursor.execute("""CREATE TABLE IF NOT EXISTS sales(
         time TEXT,
         product TEXT,
@@ -62,58 +43,12 @@ def init_db():
 init_db()
 
 # -----------------------------
-# DEFAULT USERS
-# -----------------------------
-def create_users():
-    if cursor.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
-        users = [
-            ("admin", "admin123", "Admin"),
-            ("manager", "manager123", "Manager"),
-            ("doctor", "doctor123", "Doctor")
-        ]
-        for u, p, r in users:
-            cursor.execute(
-                "INSERT INTO users VALUES (?,?,?)",
-                (u, pbkdf2_sha256.hash(p), r)
-            )
-        conn.commit()
-
-create_users()
-
-# -----------------------------
-# LOGIN
-# -----------------------------
-if not st.session_state.login:
-
-    st.title("🔐 Enterprise Command Center PRO")
-
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-
-    if st.button("Login"):
-        user = cursor.execute(
-            "SELECT * FROM users WHERE username=?",
-            (username,)
-        ).fetchone()
-
-        if user and pbkdf2_sha256.verify(password, user[1]):
-            st.session_state.login = True
-            st.session_state.user = username
-            st.session_state.role = user[2]
-            st.rerun()
-        else:
-            st.error("Invalid Credentials")
-
-    st.stop()
-
-# -----------------------------
 # SIDEBAR
 # -----------------------------
 st.sidebar.title("🚀 Control Panel")
 
-# ✅ SAFE ACCESS
-st.sidebar.success(f"{st.session_state.get('user', 'Guest')}")
-st.sidebar.info(f"Role: {st.session_state.get('role', 'N/A')}")
+st.sidebar.success("Guest User")
+st.sidebar.info("Role: Viewer")
 
 dashboard = st.sidebar.selectbox(
     "Dashboard",
@@ -244,12 +179,3 @@ if st.sidebar.button("Export Sales"):
 if st.sidebar.button("Export Hospital"):
     load_data("hospital").to_csv("hospital.csv", index=False)
     st.sidebar.success("Exported")
-
-# -----------------------------
-# LOGOUT
-# -----------------------------
-if st.sidebar.button("Logout"):
-    st.session_state.login = False
-    st.session_state.user = ""
-    st.session_state.role = ""
-    st.rerun()
